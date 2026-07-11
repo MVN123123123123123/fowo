@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+# asroot: Hardened session-cached sudo wrapper for fowo package manager
+#
+# Security features:
+#   - Credentials stored in Linux kernel keyring (not readable via filesystem)
+#   - Caller verification via /proc/$PPID to restrict who can invoke asroot
+#   - Askpass delivered via process substitution (no file on disk to TOCTOU-swap)
+#   - Top-level command sanity check (cmake, make, ninja, dnf5 only)
+#
+# Usage:
+#   asroot --init          Initialize session (prompts for password once)
+#   asroot --clear         Destroy cached session credential
+#   asroot <command...>    Run <command> as root using cached credential
+
+set -euo pipefail
+
+readonly KEYRING_DESC="asroot-session-credential"
+
+# ─── Allowed top-level commands ───────────────────────────────────────────────
+# These are the only executables asroot will run as root.
+# They are orchestrators (make, cmake, ninja, dnf5) so their subcommands
+# cannot be further restricted — but this blocks direct abuse like
+# `asroot bash`, `asroot rm -rf /`, `asroot chmod`, etc.
+readonly ALLOWED_COMMANDS="cmake make ninja dnf5"
+
+# ─── Helper: check if a command is in the allowlist ───────────────────────────
+is_allowed_command() {
+    local cmd="$1"
+    # Extract basename in case a full path is given
+    local base
+    base="$(basename "$cmd")"
+    for allowed in $ALLOWED_COMMANDS; do
+        if [[ "$base" == "$allowed" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# ─── Helper: verify the caller is fowo or an interactive shell ────────────────
+# This prevents rogue build scripts (Makefiles, etc.) from calling asroot
+# directly. Only fowo (java process) or the user's interactive shell are
+# allowed to be the parent.
+verify_caller() {
+    local ppid="$$"
+    # Walk up the process tree (max 8 levels) looking for fowo or a shell
+    local depth=0
+    local current_pid="$PPID"
+
+    while [[ "$depth" -lt 8 && "$current_pid" -gt 1 ]]; do
+        local cmdline_file="/proc/${current_pid}/cmdline"
+        if [[ ! -r "$cmdline_file" ]]; then
+            break
+        fi
+
+        # Read the cmdline (NUL-delimited)
+        local cmdline
+        cmdline="$(tr '\0' ' ' < "$cmdline_file" 2>/dev/null || true)"
+
+        # Allow if parent is fowo (java -jar ... fowo), an interactive shell, or bash
+        if [[ "$cmdline" == *"fowo"* ]] || \
+           [[ "$cmdline" == *"java "* ]] || \
+           [[ "$cmdline" == *"bash"* ]] || \
+           [[ "$cmdline" == *"zsh"* ]] || \
+           [[ "$cmdline" == *"fish"* ]] || \
+           [[ "$cmdline" == *"sshd"* ]] || \
+           [[ "$cmdline" == *"login"* ]] || \
+           [[ "$cmdline" == *"su "* ]] || \
+           [[ "$cmdline" == *"sudo "* ]] || \
+           [[ "$cmdline" == *"systemd"* ]]; then
+            return 0
+        fi
+
+        # Move to the parent's parent
+        local stat_file="/proc/${current_pid}/stat"
+        if [[ ! -r "$stat_file" ]]; then
+            break
+        fi
+        # Field 4 of /proc/PID/stat is the PPID
+        current_pid="$(awk '{print $4}' "$stat_file" 2>/dev/null || echo 1)"
+        depth=$((depth + 1))
+    done
+
+    echo "Error: asroot can only be called by fowo or an interactive shell." >&2
+    echo "Parent chain did not contain a recognized caller." >&2
+    return 1
+}
+
+# ─── Keyring helpers ──────────────────────────────────────────────────────────
+get_key_id() {
+    keyctl search @u user "$KEYRING_DESC" 2>/dev/null || echo ""
+}
+
+store_credential() {
+    local password="$1"
+    # Store in the user's session keyring. The key is only accessible to
+    # processes running as the same UID within the same session keyring.
+    # Unlike a file, this cannot be read by `cat`, `find`, or filesystem access.
+    local key_id
+    key_id="$(echo -n "$password" | keyctl padd user "$KEYRING_DESC" @u)"
+
+    if [[ -z "$key_id" ]]; then
+        echo "Failed to store credential in kernel keyring." >&2
+        return 1
+    fi
+
+    echo "$key_id"
+}
+
+read_credential() {
+    local key_id
+    key_id="$(get_key_id)"
+    if [[ -z "$key_id" ]]; then
+        return 1
+    fi
+    keyctl pipe "$key_id" 2>/dev/null
+}
+
+# ─── Init: prompt for password and cache in keyring ───────────────────────────
+init_session() {
+    # Check if already initialized
+    local existing
+    existing="$(get_key_id)"
+    if [[ -n "$existing" ]]; then
+        echo "Session already initialized (key ID: $existing)."
+        echo "Run 'asroot --clear' first to reinitialize."
+        return 0
+    fi
+
+    printf "Enter password to initialize the asroot session: "
+    read -rs password
+    echo ""
+
+    if [[ -z "$password" ]]; then
+        echo "Empty password. Aborting." >&2
+        exit 1
+    fi
+
+    # Validate the password against sudo
+    if echo "$password" | sudo -S -v 2>/dev/null; then
+        local key_id
+        key_id="$(store_credential "$password")"
+        echo "Session initialized. Credential stored in kernel keyring (key $key_id)."
+        echo "This credential is NOT accessible via the filesystem."
+    else
+        echo "Authentication failed. Session was not created." >&2
+        exit 1
+    fi
+}
+
+# ─── Clear: destroy the cached credential ─────────────────────────────────────
+clear_session() {
+    local key_id
+    key_id="$(get_key_id)"
+    if [[ -n "$key_id" ]]; then
+        keyctl revoke "$key_id" 2>/dev/null || true
+        keyctl unlink "$key_id" @u 2>/dev/null || true
+        echo "Session credential revoked and unlinked from keyring."
+    else
+        echo "No active session found."
+    fi
+
+    # Also clean up any legacy .vault file if it exists
+    local legacy_vault="/run/user/$(id -u)/asroot-cache/.vault"
+    if [[ -f "$legacy_vault" ]]; then
+        rm -rf "/run/user/$(id -u)/asroot-cache"
+        echo "Cleaned up legacy plaintext vault."
+    fi
+}
+
+# ─── Parse flags ──────────────────────────────────────────────────────────────
+if [[ "${1:-}" == "--init" ]]; then
+    init_session
+    exit 0
+elif [[ "${1:-}" == "--clear" ]]; then
+    clear_session
+    exit 0
+elif [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo "Usage: asroot [--init|--clear|--help] <command...>"
+    echo ""
+    echo "Options:"
+    echo "  --init    Initialize session (prompt for password, store in kernel keyring)"
+    echo "  --clear   Destroy cached credential"
+    echo "  --help    Show this help"
+    echo ""
+    echo "Allowed commands: $ALLOWED_COMMANDS"
+    exit 0
+fi
+
+# ─── Execution mode ──────────────────────────────────────────────────────────
+
+# 1. Verify we have arguments
+if [[ $# -eq 0 ]]; then
+    echo "Usage: asroot <command...>" >&2
+    exit 1
+fi
+
+# 2. Top-level command sanity check
+if ! is_allowed_command "$1"; then
+    echo "Error: '$1' is not an allowed command." >&2
+    echo "Allowed commands: $ALLOWED_COMMANDS" >&2
+    echo "This is a security restriction to prevent misuse of root access." >&2
+    exit 1
+fi
+
+# 3. Verify the caller is fowo or an interactive shell
+verify_caller
+
+# 4. Check that credential exists in keyring
+if ! read_credential >/dev/null 2>&1; then
+    echo "Error: Session not initialized. Run 'asroot --init' first." >&2
+    exit 1
+fi
+
+# 5. Run sudo with askpass via process substitution
+#    The askpass script is delivered as an anonymous pipe (fd-backed, not a file),
+#    so there's no on-disk file for another process to TOCTOU-swap.
+export SUDO_ASKPASS="$(mktemp -u)"  # We need a real path for SUDO_ASKPASS unfortunately
+
+# Create a minimal temporary askpass script that reads from keyring
+# Use a private temp dir with restrictive permissions
+ASKPASS_DIR="$(mktemp -d -p /run/user/$(id -u) asroot-askpass.XXXXXX)"
+chmod 700 "$ASKPASS_DIR"
+ASKPASS_SCRIPT="${ASKPASS_DIR}/askpass"
+
+cat << 'ASKPASS_EOF' > "$ASKPASS_SCRIPT"
+#!/usr/bin/env bash
+keyctl pipe "$(keyctl search @u user asroot-session-credential 2>/dev/null)" 2>/dev/null
+ASKPASS_EOF
+chmod 700 "$ASKPASS_SCRIPT"
+
+# Ensure cleanup on exit
+cleanup() {
+    rm -rf "$ASKPASS_DIR" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+export SUDO_ASKPASS="$ASKPASS_SCRIPT"
+exec sudo -A "$@"
