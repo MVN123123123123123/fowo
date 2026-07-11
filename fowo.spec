@@ -2,8 +2,8 @@ Name:           fowo
 Version:        1.0.0
 Release:        1%{?dist}
 Summary:        Source-Based Package Manager for Fedora-Based Distros
-License:        MIT
-URL:            https://github.com/example/fowo
+License:        GPL-3.0-or-later
+URL:            https://github.com/MVN123123123123123/fowo
 BuildArch:      noarch
 
 Requires:       java-headless >= 21
@@ -44,6 +44,6 @@ chmod 755 $RPM_BUILD_ROOT/usr/bin/fowo
 /usr/bin/asroot
 
 %changelog
-* Fri Jul 11 2026 Developer <dev@example.com> - 1.0.0-1
+* Fri Jul 11 2026 MVN123123123123123 - 1.0.0-1
 - Initial release of fowo package manager
 - Includes hardened asroot with kernel keyring credential storage
