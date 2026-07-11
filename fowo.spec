@@ -22,10 +22,10 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/share/fowo
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 
-# Copy the Fat JAR
+# Copy the pre-built Fat JAR from the SOURCES directory
 cp %{_sourcedir}/fowo-all.jar $RPM_BUILD_ROOT/usr/share/fowo/
 
-# Copy the hardened asroot script
+# Copy the hardened asroot script from the SOURCES directory
 cp %{_sourcedir}/asroot $RPM_BUILD_ROOT/usr/bin/asroot
 chmod 755 $RPM_BUILD_ROOT/usr/bin/asroot
 

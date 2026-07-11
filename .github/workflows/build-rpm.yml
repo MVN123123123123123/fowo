@@ -1,0 +1,48 @@
+name: Build RPM
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    # We use a container that has rpmbuild available, like Fedora, 
+    # to easily build RPMs without installing rpm-build on Ubuntu.
+    container: fedora:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          dnf install -y rpm-build java-21-openjdk-devel git findutils
+
+      - name: Build Fat JAR
+        run: |
+          ./gradlew shadowJar
+
+      - name: Setup rpmbuild directories
+        run: |
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          
+      - name: Copy files to SOURCES
+        run: |
+          cp build/libs/fowo-all.jar ~/rpmbuild/SOURCES/
+          cp asroot ~/rpmbuild/SOURCES/
+          
+      - name: Build RPM
+        run: |
+          rpmbuild -ba fowo.spec
+          
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fowo-rpm
+          path: ~/rpmbuild/RPMS/noarch/*.rpm
+          retention-days: 14
