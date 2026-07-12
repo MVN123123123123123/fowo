@@ -143,7 +143,17 @@ class SatResolver {
                 if (SystemDepChecker.isSystemDep(dep.name)) continue // system deps are handled via dnf5, not SAT solver
                 
                 // We need to find the repo URL for this dependency
-                val regEntry = Registry.lookup(dep.name)
+                var regEntry = Registry.lookup(dep.name)
+                if (regEntry == null) {
+                    System.err.println("Dependency ${dep.name} for $pkgName is not in registry!")
+                    System.err.print("Please provide a Git repository URL for ${dep.name} (or leave empty to skip): ")
+                    val providedUrl = readlnOrNull()?.trim()
+                    if (!providedUrl.isNullOrEmpty()) {
+                        regEntry = fowo.model.RegistryEntry(repoUrl = providedUrl)
+                        Registry.add(dep.name, regEntry)
+                    }
+                }
+
                 if (regEntry != null) {
                     explorePackage(dep.name, regEntry.repoUrl, regEntry.buildSystemHint)
                     if (contradicted) return
@@ -178,8 +188,6 @@ class SatResolver {
                         return
                     }
                 } else {
-                    // Dep not in registry. We can't solve it unless we ask user.
-                    System.err.println("Dependency ${dep.name} for $pkgName is not in registry!")
                     try {
                         solver.addClause(VecInt(intArrayOf(-pkgVarId)))
                     } catch (e: ContradictionException) {

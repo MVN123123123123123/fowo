@@ -3,7 +3,9 @@ package fowo.parser
 import fowo.model.Dependency
 
 object AutotoolsParser {
-    private val depRegex = Regex("""PKG_CHECK_MODULES\(\s*\[?\w+\]?\s*,\s*\[?(.+?)\]?\s*[,)]""")
+    private val depRegex = Regex("""PKG_CHECK_MODULES\(\s*\[?\w+\]?\s*,\s*\[?(.+?)\]?\s*[,)])""")
+    // AC_CHECK_LIB(library, function, ...) — extracts the library name
+    private val checkLibRegex = Regex("""AC_CHECK_LIB\(\s*\[?(\w+)\]?\s*,""")
 
     fun parse(content: String): List<Dependency> {
         val deps = mutableListOf<Dependency>()
@@ -22,6 +24,15 @@ object AutotoolsParser {
                 }
             }
         }
+        
+        // Extract AC_CHECK_LIB dependencies
+        checkLibRegex.findAll(content).forEach { matchResult ->
+            val libName = matchResult.groups[1]?.value
+            if (libName != null && !libName.startsWith("$")) {
+                deps.add(Dependency(libName))
+            }
+        }
+
         return deps.distinctBy { it.name }
     }
 }
