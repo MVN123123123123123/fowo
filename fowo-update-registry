@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: fowo-update-registry <source_json_file>" >&2
+    exit 1
+fi
+
+src="$1"
+
+if [[ ! -f "$src" ]]; then
+    echo "Error: source file '$src' not found." >&2
+    exit 1
+fi
+
+mkdir -p /etc/fowo
+cat "$src" > /etc/fowo/registry.json
+chmod 644 /etc/fowo/registry.json

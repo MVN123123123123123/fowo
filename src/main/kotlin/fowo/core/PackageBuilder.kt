@@ -131,7 +131,9 @@ object PackageBuilder {
         println("==> Building $name using ${driver.buildSystem}...")
         val extraEnv = mapOf(
             "PKG_CONFIG_PATH" to "${installPrefix.absolutePath}/lib/pkgconfig:${installPrefix.absolutePath}/share/pkgconfig",
-            "CMAKE_PREFIX_PATH" to installPrefix.absolutePath
+            "CMAKE_PREFIX_PATH" to installPrefix.absolutePath,
+            "CPPFLAGS" to "-I${installPrefix.absolutePath}/include -I${installPrefix.absolutePath}/include/ncurses",
+            "LDFLAGS" to "-L${installPrefix.absolutePath}/lib -Wl,-rpath,${installPrefix.absolutePath}/lib"
         )
 
         val configFlags = Registry.lookup(name)?.configFlags ?: emptyList()

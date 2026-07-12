@@ -29,6 +29,10 @@ cp %{_sourcedir}/fowo-all.jar $RPM_BUILD_ROOT/usr/share/fowo/
 cp %{_sourcedir}/asroot $RPM_BUILD_ROOT/usr/bin/asroot
 chmod 755 $RPM_BUILD_ROOT/usr/bin/asroot
 
+# Copy the registry update script from the SOURCES directory
+cp %{_sourcedir}/fowo-update-registry $RPM_BUILD_ROOT/usr/bin/fowo-update-registry
+chmod 755 $RPM_BUILD_ROOT/usr/bin/fowo-update-registry
+
 # Create the fowo wrapper script
 cat << 'EOF' > $RPM_BUILD_ROOT/usr/bin/fowo
 #!/bin/bash
@@ -42,6 +46,7 @@ chmod 755 $RPM_BUILD_ROOT/usr/bin/fowo
 /usr/share/fowo/fowo-all.jar
 /usr/bin/fowo
 /usr/bin/asroot
+/usr/bin/fowo-update-registry
 
 %changelog
 * Fri Jul 11 2026 MVN123123123123123 - 1.0.0-1
