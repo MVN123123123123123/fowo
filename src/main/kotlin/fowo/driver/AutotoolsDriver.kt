@@ -27,8 +27,17 @@ class AutotoolsDriver : BuildDriver {
         
         val cmds = mutableListOf<List<String>>()
         
-        if (!File(sourceDir.toFile(), "configure").exists()) {
+        val hasConfigureAc = File(sourceDir.toFile(), "configure.ac").exists() || 
+                             File(sourceDir.toFile(), "configure.in").exists()
+        
+        if (hasConfigureAc) {
+            // Always regenerate build system from configure.ac/configure.in.
+            // Pre-generated Makefiles often hardcode specific autotools versions
+            // (e.g. aclocal-1.15) that may not be installed on the build host.
             cmds.add(listOf("autoreconf", "-fi"))
+        } else if (!File(sourceDir.toFile(), "configure").exists()) {
+            // No configure.ac/in and no configure script — nothing we can do
+            return BuildResult(false, "No configure.ac, configure.in, or configure script found")
         }
         
         cmds.add(listOf("./configure", "--prefix=${installPrefix.toFile().absolutePath}"))
