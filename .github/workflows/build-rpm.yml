@@ -21,10 +21,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          dnf install -y rpm-build java-latest-openjdk-devel git findutils
+          dnf install -y rpm-build java-21-openjdk-devel git findutils
 
       - name: Build Fat JAR
         run: |
+          export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
           ./gradlew shadowJar
 
       - name: Setup rpmbuild directories
