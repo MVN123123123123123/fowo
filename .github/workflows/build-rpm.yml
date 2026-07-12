@@ -21,11 +21,20 @@ jobs:
 
       - name: Install dependencies
         run: |
-          dnf install -y rpm-build java-21-openjdk-devel git findutils
+          dnf install -y rpm-build git findutils tar gzip
+
+      - name: Install Adoptium JDK 21
+        run: |
+          curl -fsSL -o /tmp/jdk21.tar.gz \
+            "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jdk/hotspot/normal/eclipse?project=jdk"
+          mkdir -p /opt/jdk21
+          tar -xzf /tmp/jdk21.tar.gz -C /opt/jdk21 --strip-components=1
+          rm /tmp/jdk21.tar.gz
 
       - name: Build Fat JAR
         run: |
-          export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+          export JAVA_HOME=/opt/jdk21
+          export PATH="$JAVA_HOME/bin:$PATH"
           ./gradlew shadowJar
 
       - name: Setup rpmbuild directories
