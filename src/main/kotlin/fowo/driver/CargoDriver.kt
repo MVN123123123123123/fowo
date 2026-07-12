@@ -19,12 +19,12 @@ class CargoDriver : BuildDriver {
         return CargoParser.parse(file.readText())
     }
 
-    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>): BuildResult {
-        val pb = SandboxRunner.startSandboxed(listOf("cargo", "install", "--path", ".", "--root", installPrefix.toFile().absolutePath), sourceDir, extraEnv, asRoot = false)
+    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>, configFlags: List<String>): BuildResult {
+        val pb = SandboxRunner.startSandboxed(listOf("cargo", "install", "--path", ".", "--root", installPrefix.toFile().absolutePath) + configFlags, sourceDir, extraEnv, asRoot = false)
         val proc = pb.start()
         val ret = proc.waitFor()
         if (ret != 0) {
-            return BuildResult(false, proc.errorStream.bufferedReader().readText())
+            return BuildResult(false, "Command 'cargo install' failed with exit code $ret. Check the console output above for details.")
         }
         return BuildResult(true)
     }

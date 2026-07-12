@@ -19,11 +19,11 @@ class MesonDriver : BuildDriver {
         return MesonParser.parse(mesonFile.readText())
     }
 
-    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>): BuildResult {
+    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>, configFlags: List<String>): BuildResult {
         val buildDir = File(sourceDir.toFile(), "build")
         
         val cmds = listOf(
-            listOf("meson", "setup", buildDir.absolutePath, "--prefix=${installPrefix.toFile().absolutePath}"),
+            listOf("meson", "setup", "build", "--prefix=${installPrefix.toFile().absolutePath}") + configFlags,
             listOf("ninja", "-C", buildDir.absolutePath),
             listOf("asroot", "ninja", "-C", buildDir.absolutePath, "install")
         )

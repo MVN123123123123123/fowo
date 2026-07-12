@@ -143,22 +143,34 @@ class SatResolver {
                 if (SystemDepChecker.isSystemDep(dep.name)) continue // system deps are handled via dnf5, not SAT solver
                 
                 // We need to find the repo URL for this dependency
-                var regEntry = Registry.lookup(dep.name)
+                var canonicalName = Registry.resolveCanonicalName(dep.name)
+                var regEntry = Registry.lookup(canonicalName)
+                
                 if (regEntry == null) {
-                    System.err.println("Dependency ${dep.name} for $pkgName is not in registry!")
-                    System.err.print("Please provide a Git repository URL for ${dep.name} (or leave empty to skip): ")
+                    System.err.println("Dependency $canonicalName for $pkgName is not in registry!")
+                    System.err.print("Please provide a Git repository URL for $canonicalName (or type '@<name>' to alias, or leave empty to skip): ")
                     val providedUrl = readlnOrNull()?.trim()
+                    
                     if (!providedUrl.isNullOrEmpty()) {
-                        regEntry = fowo.model.RegistryEntry(repoUrl = providedUrl)
-                        Registry.add(dep.name, regEntry)
+                        if (providedUrl.startsWith("@")) {
+                            val aliasTarget = providedUrl.substring(1)
+                            regEntry = fowo.model.RegistryEntry(alias = aliasTarget)
+                            Registry.add(canonicalName, regEntry)
+                            // Re-resolve canonical name in case the alias targets another alias
+                            canonicalName = Registry.resolveCanonicalName(canonicalName)
+                            regEntry = Registry.lookup(canonicalName)
+                        } else {
+                            regEntry = fowo.model.RegistryEntry(repoUrl = providedUrl)
+                            Registry.add(canonicalName, regEntry)
+                        }
                     }
                 }
 
                 if (regEntry != null) {
-                    explorePackage(dep.name, regEntry.repoUrl, regEntry.buildSystemHint)
+                    explorePackage(canonicalName, regEntry.repoUrl, regEntry.buildSystemHint)
                     if (contradicted) return
                     
-                    val depVersions = packageVersions[dep.name] ?: emptyList()
+                    val depVersions = packageVersions[canonicalName] ?: emptyList()
                     val constraint = dep.version?.toConstraintOrNull()
                     
                     val validDepVersions = depVersions.filter {
@@ -177,10 +189,10 @@ class SatResolver {
                             val clause = VecInt()
                             clause.push(-pkgVarId) // NOT pkg_ver
                             for (v in validDepVersions) {
-                                clause.push(getVarId(dep.name, v.commitHash)) // OR dep_ver
+                                clause.push(getVarId(canonicalName, v.commitHash)) // OR dep_ver
                             }
                             solver.addClause(clause)
-                            sourceDepsForVersion.add(dep.name)
+                            sourceDepsForVersion.add(canonicalName)
                         }
                     } catch (e: ContradictionException) {
                         // The solver is now in a contradicted state — no solution possible

@@ -19,12 +19,14 @@ class CmakeDriver : BuildDriver {
         return CmakeParser.parse(cmakeFile.readText())
     }
 
-    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>): BuildResult {
-        val nproc = Runtime.getRuntime().availableProcessors()
+    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>, configFlags: List<String>): BuildResult {
         val buildDir = File(sourceDir.toFile(), "build")
+        buildDir.mkdirs()
+
+        val nproc = Runtime.getRuntime().availableProcessors()
         
         val cmds = listOf(
-            listOf("cmake", "-B", buildDir.absolutePath, "-S", sourceDir.toFile().absolutePath, "-DCMAKE_INSTALL_PREFIX=${installPrefix.toFile().absolutePath}"),
+            listOf("cmake", "-B", buildDir.absolutePath, "-S", sourceDir.toFile().absolutePath, "-DCMAKE_INSTALL_PREFIX=${installPrefix.toFile().absolutePath}") + configFlags,
             listOf("cmake", "--build", buildDir.absolutePath, "-j", "$nproc"),
             listOf("asroot", "cmake", "--install", buildDir.absolutePath)
         )

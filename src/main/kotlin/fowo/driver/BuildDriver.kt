@@ -16,5 +16,5 @@ interface BuildDriver {
     fun parseDependencies(sourceDir: Path): List<Dependency>
 
     /** Configure, build, and install the project */
-    fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>): BuildResult
+    fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>, configFlags: List<String> = emptyList()): BuildResult
 }

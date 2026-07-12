@@ -47,4 +47,13 @@ object Registry {
     fun listAll(): Map<String, RegistryEntry> {
         return entries.toMap()
     }
+
+    fun resolveCanonicalName(name: String): String {
+        val entry = lookup(name)
+        return if (entry?.alias != null) {
+            resolveCanonicalName(entry.alias) // Recursively resolve
+        } else {
+            name
+        }
+    }
 }

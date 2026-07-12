@@ -17,12 +17,12 @@ class MakeDriver : BuildDriver {
         return emptyList()
     }
 
-    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>): BuildResult {
+    override fun build(sourceDir: Path, installPrefix: Path, extraEnv: Map<String, String>, configFlags: List<String>): BuildResult {
         val nproc = Runtime.getRuntime().availableProcessors()
         
         val cmds = listOf(
-            listOf("make", "-j", "$nproc", "PREFIX=${installPrefix.toFile().absolutePath}"),
-            listOf("asroot", "make", "install", "PREFIX=${installPrefix.toFile().absolutePath}")
+            listOf("make", "-j", "$nproc", "PREFIX=${installPrefix.toFile().absolutePath}") + configFlags,
+            listOf("asroot", "make", "install", "PREFIX=${installPrefix.toFile().absolutePath}") + configFlags
         )
         
         for (cmd in cmds) {
@@ -31,7 +31,7 @@ class MakeDriver : BuildDriver {
             val proc = pb.start()
             val ret = proc.waitFor()
             if (ret != 0) {
-                return BuildResult(false, proc.errorStream.bufferedReader().readText())
+                return BuildResult(false, "Command '${cmd.joinToString(" ")}' failed with exit code $ret. Check the console output above for details.")
             }
         }
         return BuildResult(true)

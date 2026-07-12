@@ -134,7 +134,8 @@ object PackageBuilder {
             "CMAKE_PREFIX_PATH" to installPrefix.absolutePath
         )
 
-        val result = driver.build(sourceDir.toPath(), installPrefix.toPath(), extraEnv)
+        val configFlags = Registry.lookup(name)?.configFlags ?: emptyList()
+        val result = driver.build(sourceDir.toPath(), installPrefix.toPath(), extraEnv, configFlags)
         if (!result.success) {
             System.err.println("Build failed for $name:")
             System.err.println(result.errorOutput)

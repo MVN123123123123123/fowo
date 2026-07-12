@@ -47,6 +47,7 @@ object SandboxRunner {
         val pb = ProcessBuilder(finalCmd)
         pb.directory(sourceDir.toFile())
         pb.environment().putAll(extraEnv)
+        pb.inheritIO()
         return pb
     }
 }
