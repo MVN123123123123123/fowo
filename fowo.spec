@@ -33,6 +33,10 @@ chmod 755 $RPM_BUILD_ROOT/usr/bin/asroot
 cp %{_sourcedir}/fowo-update-registry $RPM_BUILD_ROOT/usr/bin/fowo-update-registry
 chmod 755 $RPM_BUILD_ROOT/usr/bin/fowo-update-registry
 
+# Copy the installed package update script from the SOURCES directory
+cp %{_sourcedir}/fowo-update-installed $RPM_BUILD_ROOT/usr/bin/fowo-update-installed
+chmod 755 $RPM_BUILD_ROOT/usr/bin/fowo-update-installed
+
 # Create the fowo wrapper script
 cat << 'EOF' > $RPM_BUILD_ROOT/usr/bin/fowo
 #!/bin/bash
@@ -47,8 +51,7 @@ chmod 755 $RPM_BUILD_ROOT/usr/bin/fowo
 /usr/bin/fowo
 /usr/bin/asroot
 /usr/bin/fowo-update-registry
+/usr/bin/fowo-update-installed
 
 %changelog
-* Fri Jul 11 2026 MVN123123123123123 - 1.0.0-1
-- Initial release of fowo package manager
-- Includes hardened asroot with kernel keyring credential storage
+%autochangelog

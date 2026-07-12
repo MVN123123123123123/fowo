@@ -26,6 +26,15 @@ object SystemDepChecker {
         }
     }
 
+    fun isInstalledViaDnf5(name: String): Boolean {
+        return try {
+            val proc = ProcessBuilder("dnf5", "list", "installed", name).start()
+            proc.waitFor() == 0
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun installSystemDep(name: String): Boolean {
         println("Installing system dependency: $name via dnf5")
         // Mapping typical pkg-config names to fedora package names

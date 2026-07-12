@@ -46,6 +46,7 @@ jobs:
           cp build/libs/fowo-all.jar ~/rpmbuild/SOURCES/
           cp asroot ~/rpmbuild/SOURCES/
           cp fowo-update-registry ~/rpmbuild/SOURCES/
+          cp fowo-update-installed ~/rpmbuild/SOURCES/
           
       - name: Build RPM
         run: |

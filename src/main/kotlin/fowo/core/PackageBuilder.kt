@@ -98,6 +98,15 @@ object PackageBuilder {
                 }
                 
                 // Now build this package
+                if (InstalledDatabase.isInstalled(pkg)) {
+                    println("==> Package $pkg is already installed via fowo. Skipping build.")
+                    return@async true
+                }
+                if (SystemDepChecker.isInstalledViaDnf5(pkg)) {
+                    println("==> Package $pkg is already installed via dnf5. Skipping build.")
+                    return@async true
+                }
+
                 val gitVer = resolution[pkg]!!
                 val hint = if (pkg == rootPkg) rootHint else Registry.lookup(pkg)?.buildSystemHint
                 buildPackage(pkg, gitVer, hint)
@@ -145,6 +154,7 @@ object PackageBuilder {
         }
         
         println("==> Installed $name successfully!")
+        InstalledDatabase.addInstalled(name, gitVer.commitHash)
         return true
     }
 }

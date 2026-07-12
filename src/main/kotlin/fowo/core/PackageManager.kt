@@ -7,6 +7,15 @@ object PackageManager {
     fun install(url: String, name: String? = null, buildSystemHint: fowo.model.BuildSystem? = null) {
         val actualName = name ?: url.substringAfterLast("/").substringBefore(".git")
         
+        if (InstalledDatabase.isInstalled(actualName)) {
+            System.err.println("Package $actualName is already installed via fowo.")
+            return
+        }
+        if (SystemDepChecker.isInstalledViaDnf5(actualName)) {
+            System.err.println("Package $actualName is already installed via dnf5.")
+            return
+        }
+
         println("==> Initializing root session for installation...")
         try {
             val proc = ProcessBuilder("asroot", "--init").inheritIO().start()

@@ -21,7 +21,7 @@ readonly KEYRING_DESC="asroot-session-credential"
 # They are orchestrators (make, cmake, ninja, dnf5) so their subcommands
 # cannot be further restricted — but this blocks direct abuse like
 # `asroot bash`, `asroot rm -rf /`, `asroot chmod`, etc.
-readonly ALLOWED_COMMANDS="cmake make ninja dnf5"
+readonly ALLOWED_COMMANDS="cmake make ninja dnf5 fowo-update-registry fowo-update-installed"
 
 # ─── Helper: check if a command is in the allowlist ───────────────────────────
 is_allowed_command() {
