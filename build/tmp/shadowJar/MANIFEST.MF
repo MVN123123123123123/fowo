@@ -1,3 +1,4 @@
 Manifest-Version: 1.0
 Main-Class: fowo.cli.MainKt
+Multi-Release: true
 

@@ -23,8 +23,8 @@
 @rem
 @rem ##########################################################################
 
-@rem Set local scope for the variables with windows NT shell
-if "%OS%"=="Windows_NT" setlocal
+@rem Set local scope for the variables, and ensure extensions are enabled
+setlocal EnableExtensions
 
 set DIRNAME=%~dp0
 if "%DIRNAME%"=="" set DIRNAME=.
@@ -51,7 +51,7 @@ echo. 1>&2
 echo Please set the JAVA_HOME variable in your environment to match the 1>&2
 echo location of your Java installation. 1>&2
 
-goto fail
+"%COMSPEC%" /c exit 1
 
 :findJavaFromJavaHome
 set JAVA_HOME=%JAVA_HOME:"=%
@@ -65,30 +65,19 @@ echo. 1>&2
 echo Please set the JAVA_HOME variable in your environment to match the 1>&2
 echo location of your Java installation. 1>&2
 
-goto fail
+"%COMSPEC%" /c exit 1
 
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\lib\fowo-1.0-SNAPSHOT.jar;%APP_HOME%\lib\semver-jvm-3.1.0.jar;%APP_HOME%\lib\kotlinx-serialization-core-jvm-1.7.3.jar;%APP_HOME%\lib\kotlinx-serialization-json-jvm-1.7.3.jar;%APP_HOME%\lib\clikt-mordant-markdown-jvm.jar;%APP_HOME%\lib\clikt-mordant-jvm.jar;%APP_HOME%\lib\kotlinx-coroutines-core-jvm-1.9.0.jar;%APP_HOME%\lib\clikt-jvm.jar;%APP_HOME%\lib\mordant-omnibus-jvm.jar;%APP_HOME%\lib\mordant-markdown-jvm.jar;%APP_HOME%\lib\mordant-jvm-jna-jvm.jar;%APP_HOME%\lib\mordant-jvm-ffm-jvm.jar;%APP_HOME%\lib\mordant-jvm-graal-ffi-jvm.jar;%APP_HOME%\lib\mordant-jvm.jar;%APP_HOME%\lib\markdown-jvm-0.7.3.jar;%APP_HOME%\lib\colormath-jvm.jar;%APP_HOME%\lib\kotlin-stdlib-2.1.10.jar;%APP_HOME%\lib\org.ow2.sat4j.core-2.3.6.jar;%APP_HOME%\lib\annotations-23.0.0.jar;%APP_HOME%\lib\jna-5.14.0.jar
+set CLASSPATH=%APP_HOME%\lib\fowo-1.0-SNAPSHOT.jar;%APP_HOME%\lib\semver-jvm-3.1.0.jar;%APP_HOME%\lib\kotlinx-serialization-core-jvm-1.7.3.jar;%APP_HOME%\lib\kotlinx-serialization-json-jvm-1.7.3.jar;%APP_HOME%\lib\clikt-mordant-markdown-jvm.jar;%APP_HOME%\lib\clikt-mordant-jvm.jar;%APP_HOME%\lib\kotlinx-coroutines-core-jvm-1.9.0.jar;%APP_HOME%\lib\clikt-jvm.jar;%APP_HOME%\lib\mordant-omnibus-jvm.jar;%APP_HOME%\lib\mordant-markdown-jvm.jar;%APP_HOME%\lib\mordant-jvm-jna-jvm.jar;%APP_HOME%\lib\mordant-jvm-ffm-jvm.jar;%APP_HOME%\lib\mordant-jvm-graal-ffi-jvm.jar;%APP_HOME%\lib\mordant-jvm.jar;%APP_HOME%\lib\markdown-jvm-0.7.3.jar;%APP_HOME%\lib\colormath-jvm.jar;%APP_HOME%\lib\kotlin-stdlib-2.4.0.jar;%APP_HOME%\lib\org.ow2.sat4j.core-2.3.6.jar;%APP_HOME%\lib\annotations-23.0.0.jar;%APP_HOME%\lib\jna-5.14.0.jar
 
 
 @rem Execute fowo
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %FOWO_OPTS%  -classpath "%CLASSPATH%" fowo.cli.MainKt %*
+@rem endlocal doesn't take effect until after the line is parsed and variables are expanded
+@rem which allows us to clear the local environment before executing the java command
+endlocal & "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %FOWO_OPTS%  -classpath "%CLASSPATH%" fowo.cli.MainKt %* & call :exitWithErrorLevel
 
-:end
-@rem End local scope for the variables with windows NT shell
-if %ERRORLEVEL% equ 0 goto mainEnd
-
-:fail
-rem Set variable FOWO_EXIT_CONSOLE if you need the _script_ return code instead of
-rem the _cmd.exe /c_ return code!
-set EXIT_CODE=%ERRORLEVEL%
-if %EXIT_CODE% equ 0 set EXIT_CODE=1
-if not ""=="%FOWO_EXIT_CONSOLE%" exit %EXIT_CODE%
-exit /b %EXIT_CODE%
-
-:mainEnd
-if "%OS%"=="Windows_NT" endlocal
-
-:omega
+:exitWithErrorLevel
+@rem Use "%COMSPEC%" /c exit to allow operators to work properly in scripts
+"%COMSPEC%" /c exit %ERRORLEVEL%

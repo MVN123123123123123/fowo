@@ -1,12 +1,16 @@
 plugins {
-    kotlin("jvm") version "2.0.21"
-    kotlin("plugin.serialization") version "2.0.21"
-    id("com.gradleup.shadow") version "8.3.3"
+    kotlin("jvm") version "2.4.0"
+    kotlin("plugin.serialization") version "2.4.0"
+    id("com.gradleup.shadow") version "9.5.1"
     application
 }
 
 group = "org.fowo"
 version = "1.0-SNAPSHOT"
+
+kotlin {
+    jvmToolchain(21)
+}
 
 repositories {
     mavenCentral()
