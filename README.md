@@ -1,5 +1,5 @@
 # fowo
-an source-based package manager. fowo is the initialism for forward (for normal people) or FedOwOra for degenerates like me >w<
+an source-based package manager. fowo is the initialism for fedora (for normal people) or FedOwOra for degenerates like me >w<
 
 **j4f project. don't take this seriously.**
 *still,if you do use it on ur code, gpl buddy,no closed source.*
