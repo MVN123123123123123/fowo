@@ -8,5 +8,6 @@ data class RegistryEntry(
     val alias: String? = null,
     val branch: String? = null,
     val buildSystemHint: BuildSystem? = null,
-    val configFlags: List<String> = emptyList()
+    val configFlags: List<String> = emptyList(),
+    val ignored: Boolean = false
 )

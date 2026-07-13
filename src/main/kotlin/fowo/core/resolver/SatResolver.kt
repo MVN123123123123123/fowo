@@ -29,6 +29,9 @@ class SatResolver {
     // Track whether a contradiction was detected during exploration
     private var contradicted = false
 
+    // Track deps the user chose to skip so we don't ask repeatedly across versions
+    private val skippedDeps = mutableSetOf<String>()
+
     init {
         solver.newVar(10000)
     }
@@ -146,9 +149,9 @@ class SatResolver {
                 var canonicalName = Registry.resolveCanonicalName(dep.name)
                 var regEntry = Registry.lookup(canonicalName)
                 
-                if (regEntry == null) {
+                if (regEntry == null && !skippedDeps.contains(canonicalName)) {
                     System.err.println("Dependency $canonicalName for $pkgName is not in registry!")
-                    System.err.print("Please provide a Git repository URL for $canonicalName (append #branch to specify a branch, or type '@<name>' to alias, or leave empty to skip): ")
+                    System.err.print("Please provide a Git repository URL for $canonicalName (append #branch, type '@<name>' to alias, type 'ignore' to skip permanently, or leave empty to skip for now): ")
                     val providedInput = readlnOrNull()?.trim()
                     
                     if (!providedInput.isNullOrEmpty()) {
@@ -159,6 +162,9 @@ class SatResolver {
                             // Re-resolve canonical name in case the alias targets another alias
                             canonicalName = Registry.resolveCanonicalName(canonicalName)
                             regEntry = Registry.lookup(canonicalName)
+                        } else if (providedInput.lowercase() == "ignore") {
+                            regEntry = fowo.model.RegistryEntry(ignored = true)
+                            Registry.add(canonicalName, regEntry)
                         } else {
                             // Support URL#branch syntax
                             val parts = providedInput.split("#", limit = 2)
@@ -167,8 +173,13 @@ class SatResolver {
                             regEntry = fowo.model.RegistryEntry(repoUrl = repoUrl, branch = branch)
                             Registry.add(canonicalName, regEntry)
                         }
+                    } else {
+                        // User chose to skip this dep — remember so we don't ask again
+                        skippedDeps.add(canonicalName)
                     }
                 }
+
+                if (regEntry?.ignored == true) continue
 
                 if (regEntry != null) {
                     explorePackage(canonicalName, regEntry.repoUrl, regEntry.branch, regEntry.buildSystemHint)

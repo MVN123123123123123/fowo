@@ -10,9 +10,21 @@ object SystemDepChecker {
         "re2", "muparser", "lcms2", "gl", "egl", "glesv2", "threads"
     )
 
+    // Windows-only libraries that should be silently ignored on a Fedora-based system
+    private val windowsOnlyDeps = setOf(
+        "gdi32", "user32", "kernel32", "advapi32", "shell32", "ole32", "oleaut32",
+        "ws2_32", "mswsock", "comdlg32", "comctl32", "imm32", "winmm", "shlwapi",
+        "uuid", "dwmapi", "uxtheme", "d2d1", "d3d11", "d3d12", "dxgi", "dwrite",
+        "dcomp", "windowscodecs", "setupapi", "cfgmgr32", "crypt32", "secur32",
+        "bcrypt", "ncrypt", "userenv", "psapi", "iphlpapi", "mfplat", "mf",
+        "appleframeworks"
+    )
+
     fun isSystemDep(name: String): Boolean {
-        // Simple heuristic: if it's in our known list, or if pkg-config says it exists on the host system.
-        if (knownSystemDeps.contains(name.lowercase())) return true
+        val lower = name.lowercase()
+        // Skip known system deps and Windows-only deps
+        if (knownSystemDeps.contains(lower)) return true
+        if (windowsOnlyDeps.contains(lower)) return true
         
         return isInstalledViaPkgConfig(name)
     }
