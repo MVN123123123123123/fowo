@@ -17,7 +17,7 @@ object VersionScanner {
     /**
      * Ensures the repository is cloned locally and fetches all tags with their timestamps.
      */
-    fun scanVersions(name: String, repoUrl: String): List<GitVersion> {
+    fun scanVersions(name: String, repoUrl: String, branch: String? = null): List<GitVersion> {
         cacheDir.mkdirs()
         val sourceDir = File(cacheDir, name)
 
@@ -32,7 +32,7 @@ object VersionScanner {
             }
         } else {
             // Fetch updates
-            ProcessBuilder("git", "fetch", "--tags", "--force")
+            ProcessBuilder("git", "fetch", "origin", "+refs/heads/*:refs/remotes/origin/*", "--tags", "--force")
                 .directory(sourceDir).start().waitFor()
         }
 
@@ -75,8 +75,32 @@ object VersionScanner {
             }
         }
 
-        // Also add the HEAD/main branch as a fallback 'latest' version if no tags exist
-        if (versions.isEmpty()) {
+        if (branch != null) {
+            val branchProc = ProcessBuilder("git", "log", "-1", "--format=%H %ct", "origin/$branch").directory(sourceDir).start()
+            val branchOutput = branchProc.inputStream.bufferedReader().readText().trim()
+            if (branchProc.waitFor() == 0 && branchOutput.isNotBlank()) {
+                val p = branchOutput.split(" ")
+                if (p.size >= 2) {
+                    val hash = p[0]
+                    val ts = p[1].toLongOrNull() ?: 0L
+                    versions.add(GitVersion(branch, null, hash, Instant.ofEpochSecond(ts)))
+                }
+            } else {
+                val localProc = ProcessBuilder("git", "log", "-1", "--format=%H %ct", branch).directory(sourceDir).start()
+                val localOutput = localProc.inputStream.bufferedReader().readText().trim()
+                if (localProc.waitFor() == 0 && localOutput.isNotBlank()) {
+                    val p = localOutput.split(" ")
+                    if (p.size >= 2) {
+                        val hash = p[0]
+                        val ts = p[1].toLongOrNull() ?: 0L
+                        versions.add(GitVersion(branch, null, hash, Instant.ofEpochSecond(ts)))
+                    }
+                }
+            }
+        }
+
+        // Also add the HEAD/main branch as a fallback 'latest' version if no tags exist and no specific branch is requested
+        if (versions.isEmpty() && branch == null) {
             val headProc = ProcessBuilder("git", "log", "-1", "--format=%H %ct").directory(sourceDir).start()
             // Read stdout before waitFor()
             val headOutput = headProc.inputStream.bufferedReader().readText().trim()

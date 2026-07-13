@@ -48,7 +48,7 @@ class SatResolver {
     )
 
     fun resolve(rootPkg: String, rootRepoUrl: String, rootBranchOrTag: String? = null, rootBuildSystemHint: fowo.model.BuildSystem? = null): ResolutionResult? {
-        explorePackage(rootPkg, rootRepoUrl, rootBuildSystemHint)
+        explorePackage(rootPkg, rootRepoUrl, rootBranchOrTag, rootBuildSystemHint)
         
         if (contradicted) {
             System.err.println("Unsatisfiable dependency constraints detected during exploration.")
@@ -119,12 +119,12 @@ class SatResolver {
         return null
     }
 
-    private fun explorePackage(pkgName: String, repoUrl: String, buildSystemHint: fowo.model.BuildSystem? = null) {
+    private fun explorePackage(pkgName: String, repoUrl: String, branch: String? = null, buildSystemHint: fowo.model.BuildSystem? = null) {
         if (contradicted) return
         if (!exploredPackages.add(pkgName)) return
         
         println("==> Discovering versions for $pkgName...")
-        val versions = VersionScanner.scanVersions(pkgName, repoUrl)
+        val versions = VersionScanner.scanVersions(pkgName, repoUrl, branch)
         packageVersions[pkgName] = versions
         
         for (gitVer in versions) {
@@ -167,7 +167,7 @@ class SatResolver {
                 }
 
                 if (regEntry != null) {
-                    explorePackage(canonicalName, regEntry.repoUrl, regEntry.buildSystemHint)
+                    explorePackage(canonicalName, regEntry.repoUrl, regEntry.branch, regEntry.buildSystemHint)
                     if (contradicted) return
                     
                     val depVersions = packageVersions[canonicalName] ?: emptyList()
