@@ -12,7 +12,7 @@ object MesonParser {
             val name = matchResult.groups[1]?.value
             // Preserve the full version constraint string (e.g. ">=1.2.3") for the SAT resolver
             val ver = matchResult.groups[2]?.value?.trim()
-            if (name != null) {
+            if (name != null && name.any { it.isLetter() }) {
                 deps.add(Dependency(name, ver))
             }
         }

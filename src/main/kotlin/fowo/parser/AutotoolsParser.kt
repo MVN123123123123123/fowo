@@ -18,7 +18,7 @@ object AutotoolsParser {
                 if (match != null) {
                     val name = match.groups[1]?.value
                     val ver = match.groups[2]?.value
-                    if (name != null) {
+                    if (name != null && name.any { it.isLetter() }) {
                         deps.add(Dependency(name, ver))
                     }
                 }

@@ -23,7 +23,7 @@ object CmakeParser {
                 if (match != null) {
                     val name = match.groups[1]?.value
                     val operator = match.groups[2]?.value  // e.g. ">=0.6.7" — full operator+version
-                    if (name != null) {
+                    if (name != null && name.any { it.isLetter() }) {
                         // Preserve the full constraint string (e.g. ">=0.6.7") for the SAT resolver
                         deps.add(Dependency(name, operator))
                     }
@@ -35,7 +35,7 @@ object CmakeParser {
         findPkgRegex.findAll(content).forEach { matchResult ->
             val name = matchResult.groups[1]?.value
             val ver = matchResult.groups[2]?.value
-            if (name != null && name != "Threads" && name != "PkgConfig") {
+            if (name != null && name != "Threads" && name != "PkgConfig" && name.any { it.isLetter() }) {
                 // find_package versions are minimum required, so treat as >=
                 val constraint = if (ver != null) ">=$ver" else null
                 deps.add(Dependency(name, constraint))
