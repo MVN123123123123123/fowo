@@ -28,8 +28,11 @@ object SystemDepChecker {
 
     fun isInstalledViaDnf5(name: String): Boolean {
         return try {
-            val proc = ProcessBuilder("dnf5", "list", "installed", name).start()
-            proc.waitFor() == 0
+            val proc = ProcessBuilder("dnf5", "list", "installed", name)
+                .redirectErrorStream(true)
+                .start()
+            val output = proc.inputStream.bufferedReader().readText()
+            proc.waitFor() == 0 && output.contains("Installed")
         } catch (e: Exception) {
             false
         }
