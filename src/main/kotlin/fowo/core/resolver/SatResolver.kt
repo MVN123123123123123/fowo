@@ -148,19 +148,23 @@ class SatResolver {
                 
                 if (regEntry == null) {
                     System.err.println("Dependency $canonicalName for $pkgName is not in registry!")
-                    System.err.print("Please provide a Git repository URL for $canonicalName (or type '@<name>' to alias, or leave empty to skip): ")
-                    val providedUrl = readlnOrNull()?.trim()
+                    System.err.print("Please provide a Git repository URL for $canonicalName (append #branch to specify a branch, or type '@<name>' to alias, or leave empty to skip): ")
+                    val providedInput = readlnOrNull()?.trim()
                     
-                    if (!providedUrl.isNullOrEmpty()) {
-                        if (providedUrl.startsWith("@")) {
-                            val aliasTarget = providedUrl.substring(1)
+                    if (!providedInput.isNullOrEmpty()) {
+                        if (providedInput.startsWith("@")) {
+                            val aliasTarget = providedInput.substring(1)
                             regEntry = fowo.model.RegistryEntry(alias = aliasTarget)
                             Registry.add(canonicalName, regEntry)
                             // Re-resolve canonical name in case the alias targets another alias
                             canonicalName = Registry.resolveCanonicalName(canonicalName)
                             regEntry = Registry.lookup(canonicalName)
                         } else {
-                            regEntry = fowo.model.RegistryEntry(repoUrl = providedUrl)
+                            // Support URL#branch syntax
+                            val parts = providedInput.split("#", limit = 2)
+                            val repoUrl = parts[0]
+                            val branch = if (parts.size > 1) parts[1] else null
+                            regEntry = fowo.model.RegistryEntry(repoUrl = repoUrl, branch = branch)
                             Registry.add(canonicalName, regEntry)
                         }
                     }

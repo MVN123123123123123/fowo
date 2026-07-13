@@ -14,9 +14,10 @@ class InstallCommand : CliktCommand(name = "install") {
     override fun help(context: com.github.ajalt.clikt.core.Context) = "Install a package from a git repository URL"
     val url by argument().help("The git repository URL")
     val buildSystem by option("--build-system").enum<BuildSystem>().help("Force a specific build system (CMAKE, MESON, AUTOTOOLS, CARGO, MAKE)")
+    val branch by option("--branch", "-b").help("Clone a specific branch or tag instead of the default")
 
     override fun run() {
         echo("Starting installation from $url")
-        PackageManager.install(url, buildSystemHint = buildSystem)
+        PackageManager.install(url, buildSystemHint = buildSystem, branch = branch)
     }
 }

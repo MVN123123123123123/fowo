@@ -4,7 +4,7 @@ import fowo.core.resolver.SatResolver
 import kotlinx.coroutines.runBlocking
 
 object PackageManager {
-    fun install(url: String, name: String? = null, buildSystemHint: fowo.model.BuildSystem? = null) {
+    fun install(url: String, name: String? = null, buildSystemHint: fowo.model.BuildSystem? = null, branch: String? = null) {
         val actualName = name ?: url.substringAfterLast("/").substringBefore(".git")
         
         if (InstalledDatabase.isInstalled(actualName)) {
@@ -30,7 +30,7 @@ object PackageManager {
         
         println("==> Starting dependency resolution for $actualName...")
         val resolver = SatResolver()
-        val result = resolver.resolve(actualName, url, rootBuildSystemHint = buildSystemHint)
+        val result = resolver.resolve(actualName, url, rootBranchOrTag = branch, rootBuildSystemHint = buildSystemHint)
         
         if (result == null) {
             System.err.println("Failed to resolve dependencies for $actualName.")
